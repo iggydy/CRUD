@@ -2,6 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { HeroeModel } from 'src/app/models/heroe.model';
 import { NgForm } from '@angular/forms';
 import { HeroesService } from '../../services/heroes.service';
+import Swal from 'sweetalert2';
+import { Observable } from 'rxjs';
+import { switchAll } from 'rxjs/operators';
+import { ActivatedRoute } from '@angular/router';
+
 
 @Component({
   selector: 'app-heroe',
@@ -12,9 +17,20 @@ export class HeroeComponent implements OnInit {
 
   heroe = new HeroeModel();
 
-  constructor( private hero: HeroesService ) { }
+  constructor( private hero: HeroesService,
+               private route: ActivatedRoute ) { }
 
   ngOnInit(): void {
+
+    const id = this.route.snapshot.paramMap.get('id');
+
+    if (id !== 'nuevo') {
+      this.hero.getHeroe(id)
+      .subscribe( (resp: HeroeModel ) => {
+        this.heroe = resp;
+        this.heroe.id = id;
+      })
+    }
   }
 
   save(form: NgForm) {
@@ -24,18 +40,39 @@ export class HeroeComponent implements OnInit {
       return;
     }
 
+    Swal.fire({
+      title: 'Espere',
+      text: 'Guardande información',
+      icon: 'info',
+      allowOutsideClick: false
+    });
+
+    Swal.showLoading();
+
+    let petition: Observable<any>;
+
     if (this.heroe.id) {
-      this.hero.upDateHero(this.heroe)
-      .subscribe( resp => {
-        console.log(resp);
+      petition = this.hero.upDateHero(this.heroe);
+
+      petition.subscribe( resp => {
+        Swal.fire({
+          title: this.heroe.nombre,
+          text: 'Se actualizó correctamente',
+          icon: 'success'
+        });
       });
 
     } else {
 
-      this.hero.createHero(this.heroe)
-      .subscribe( resp => {
-        this.heroe = resp;
-      });
+      petition = this.hero.createHero(this.heroe);
+      petition.subscribe( resp => {
+        Swal.fire({
+          title: this.heroe.nombre,
+          text: 'Se creó correctamente',
+              icon: 'success'
+
+            });
+          });
     }
 
   }
